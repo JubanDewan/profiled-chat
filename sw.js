@@ -1,5 +1,5 @@
 // Naikkan VERSION setiap kali file aplikasi diubah agar cache lama dibuang
-const VERSION = "v1";
+const VERSION = "v3";
 const SHELL = "shell-" + VERSION, RUNTIME = "runtime-" + VERSION;
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png"];
 
@@ -45,4 +45,18 @@ self.addEventListener("fetch", e => {
       })
     );
   }
+});
+
+// Ketuk notifikasi: fokuskan jendela yang sudah terbuka, atau buka baru, lalu menuju room-nya
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const room = e.notification.data && e.notification.data.room;
+  e.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if ("focus" in c) { c.postMessage({ type: "open-room", room }); return c.focus(); }
+      }
+      return clients.openWindow(new URL("./" + (room ? "#" + room : ""), self.registration.scope).href);
+    })
+  );
 });

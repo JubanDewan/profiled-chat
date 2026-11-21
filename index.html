@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Obrolan">
 <script>addEventListener("beforeinstallprompt",e=>{e.preventDefault();window.__bip=e;dispatchEvent(new Event("bip"))});</script>
-<title>Chat Messages</title>
+<title>Obrolan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -43,7 +43,7 @@ button,input,textarea{font:inherit;color:inherit}
 .err{color:var(--err);font-size:14px;min-height:20px;margin-bottom:10px}
 
 /* Avatar */
-.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;flex:none;user-select:none}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;flex:none;user-select:none;background-size:cover;background-position:center}
 .av.lg{width:56px;height:56px;font-size:24px}
 
 /* Masuk / daftar */
@@ -66,7 +66,7 @@ button,input,textarea{font:inherit;color:inherit}
 .room{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;color:var(--text);text-decoration:none;font-weight:500}
 .room:hover{background:var(--in)}
 .room.on{background:var(--in);font-weight:700}
-.room i{width:34px;height:34px;border-radius:10px;background:var(--in);color:var(--name);display:grid;place-items:center;font-style:normal;font-weight:700;flex:none}
+.room i,.ric{background-size:cover;background-position:center;width:34px;height:34px;border-radius:10px;background:var(--in);color:var(--name);display:grid;place-items:center;font-style:normal;font-weight:700;flex:none}
 .room.on i{background:var(--out);color:var(--on-out)}
 .room span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -100,6 +100,20 @@ dialog h2{font-size:18px;margin-bottom:16px}
 .sw button[aria-pressed=true]{border-color:var(--text)}
 .pv{display:flex;align-items:center;gap:14px;margin-bottom:16px}
 
+.ric.lg{width:56px;height:56px;font-size:24px;border-radius:14px}
+.btn.sm{padding:7px 13px;font-size:14px;border-radius:10px}
+.pvb{display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:12.5px;color:var(--muted);margin:-6px 0 10px}
+.bubble.dots{display:flex;gap:5px;align-items:center;padding:13px 14px}
+.dots span{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite ease-in-out}
+.dots span:nth-child(2){animation-delay:.18s}
+.dots span:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,60%,100%{opacity:.35;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+.room .badge{margin-left:auto;flex:none;min-width:22px;padding:1px 7px;border-radius:11px;background:var(--out);color:var(--on-out);font-size:12px;font-weight:700;text-align:center}
+.room.unread span{font-weight:700}
+.toast{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:50;width:min(420px,calc(100% - 24px));display:block;text-align:left;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:10px 14px;box-shadow:0 8px 28px rgba(0,0,0,.22);cursor:pointer}
+.toast b{display:block;font-size:13px;color:var(--name)}
+.toast span{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:759px){
   .app{grid-template-columns:1fr}
   .chat{display:none}
@@ -108,7 +122,7 @@ dialog h2{font-size:18px;margin-bottom:16px}
   #back{display:grid}
   .row{max-width:86%}
 }
-@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.dots span{animation:none!important;opacity:.6}}
 </style>
 </head>
 <body>
@@ -116,7 +130,7 @@ dialog h2{font-size:18px;margin-bottom:16px}
 <div class="auth" id="auth" hidden>
   <div class="card">
     <h1>Selamat datang</h1>
-    <p class="sub">Masukkan username untuk mulai..</p>
+    <p class="sub">Masukkan namamu untuk mulai. Perangkat ini akan diingat, jadi kamu tidak perlu mengisinya lagi.</p>
     <form id="authForm">
       <label class="field">Nama<input id="aName" maxlength="24" autocomplete="nickname" required autofocus></label>
       <p class="err" id="aErr" role="alert"></p>
@@ -129,6 +143,7 @@ dialog h2{font-size:18px;margin-bottom:16px}
   <aside class="side">
     <div class="side-h">
       <button class="me" id="meBtn" type="button" title="Ubah profil"><span id="meAv"></span><span style="min-width:0"><b id="meName"></b><small id="meBio"></small></span></button>
+      <button class="icon" id="bellBtn" type="button" aria-pressed="false" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/><path id="bellSlash" d="M3 3l18 18"/></svg></button>
       
     </div>
     <h2>Room</h2>
@@ -139,7 +154,9 @@ dialog h2{font-size:18px;margin-bottom:16px}
   <section class="chat">
     <header>
       <a class="icon" id="back" href="#" aria-label="Kembali"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
-      <h2 id="title">Obrolan</h2>
+      <span class="ric" id="hIcon" hidden></span>
+      <h2 id="title" style="flex:1;min-width:0">Obrolan</h2>
+      <button class="icon" id="editRoom" type="button" title="Ubah room" aria-label="Ubah room" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
     </header>
     <main id="log" aria-live="polite"></main>
     <form class="send" id="form" hidden>
@@ -149,10 +166,16 @@ dialog h2{font-size:18px;margin-bottom:16px}
   </section>
 </div>
 
+<button class="toast" id="toast" type="button" role="status" hidden><b id="toastT"></b><span id="toastB"></span></button>
+
 <dialog id="pDlg">
   <form id="pForm">
     <h2>Profil kamu</h2>
-    <div class="pv"><span id="pAv"></span><span style="color:var(--muted);font-size:14px">Pilih warna avatar</span></div>
+    <div class="pv"><span id="pAv"></span>
+      <span class="pvb"><button class="btn ghost sm" type="button" id="pPick">Pilih foto</button><button class="btn ghost sm" type="button" id="pDel" hidden>Hapus foto</button></span>
+    </div>
+    <input type="file" id="pFile" accept="image/*" hidden>
+    <p class="hint">Foto dikecilkan otomatis menjadi 96 px agar ringan. Warna di bawah dipakai jika tanpa foto.</p>
     <div class="sw" id="sw"></div>
     <label class="field">Nama<input id="pName" maxlength="24" required></label>
     <label class="field">Tentang kamu<textarea id="pBio" maxlength="80" rows="2" style="resize:none"></textarea></label>
@@ -163,10 +186,14 @@ dialog h2{font-size:18px;margin-bottom:16px}
 
 <dialog id="rDlg">
   <form id="rForm">
-    <h2>Room baru</h2>
+    <h2 id="rTitle">Room baru</h2>
+    <div class="pv"><span class="ric lg" id="rAv"></span>
+      <span class="pvb"><button class="btn ghost sm" type="button" id="rPick">Pilih ikon</button><button class="btn ghost sm" type="button" id="rDel" hidden>Hapus ikon</button></span>
+    </div>
+    <input type="file" id="rFile" accept="image/*" hidden>
     <label class="field">Nama room<input id="rName" maxlength="30" placeholder="Contoh: Nongkrong" required></label>
     <p class="err" id="rErr" role="alert"></p>
-    <div class="acts"><button class="btn ghost" type="button" id="rCancel">Batal</button><button class="btn" type="submit">Buat</button></div>
+    <div class="acts"><button class="btn ghost" type="button" id="rCancel">Batal</button><button class="btn" id="rGo" type="submit">Buat</button></div>
   </form>
 </dialog>
 
@@ -174,7 +201,7 @@ dialog h2{font-size:18px;margin-bottom:16px}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInAnonymously }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, addDoc, collection, query, orderBy, limitToLast, onSnapshot, serverTimestamp }
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, limitToLast, onSnapshot, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -196,15 +223,64 @@ const $ = id => document.getElementById(id);
 const COLORS = ["#00A884", "#0E7C86", "#3B82F6", "#8B5CF6", "#D9468F", "#E26D2F", "#C0392B", "#64748B"];
 
 let me = null, pendingName = null;
-let rooms = [], room = null, unsubRooms = null, unsubMsgs = null, last = null;
+let rooms = [], room = null, unsubRooms = null, unsubMsgs = null, unsubTyp = null, last = null;
+let typEl = null, typTimer = null, typLast = 0, typRoom = null;
+const typists = new Map(), unread = new Map(), watchedRooms = new Map();
 
 const initial = s => (Array.from((s || "?").trim())[0] || "?").toUpperCase();
-function avatar(name, color, cls = "") {
+// Hanya terima gambar data-URL kecil yang dibuat aplikasi ini
+const safePhoto = p => (typeof p === "string" && p.length < 20000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p)) ? p : "";
+
+function paintAv(d, name, color, photo) {
+  d.style.backgroundColor = color || COLORS[0];
+  if (photo) { d.style.backgroundImage = `url("${photo}")`; d.textContent = ""; }
+  else { d.style.backgroundImage = ""; d.textContent = initial(name); }
+}
+function avatar(name, color, cls = "", uid = "", photo = "") {
   const d = document.createElement("div");
   d.className = "av " + cls;
-  d.style.background = color || COLORS[0];
-  d.textContent = initial(name);
+  if (uid) d.dataset.uid = uid;
+  paintAv(d, name, color, safePhoto(photo));
   return d;
+}
+function paintRic(el, photo) {
+  photo = safePhoto(photo);
+  el.style.backgroundImage = photo ? `url("${photo}")` : "";
+  el.textContent = photo ? "" : "#";
+}
+// Perkecil gambar menjadi 96x96 JPEG (sekitar 4 KB) supaya muat di Firestore tanpa Firebase Storage
+function thumbnail(file, size = 96, quality = 0.72) {
+  return new Promise((ok, fail) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const w = img.naturalWidth, h = img.naturalHeight, m = Math.min(w, h);
+      const c = document.createElement("canvas"); c.width = c.height = size;
+      const x = c.getContext("2d");
+      x.fillStyle = "#fff"; x.fillRect(0, 0, size, size);
+      x.imageSmoothingQuality = "high";
+      x.drawImage(img, (w - m) / 2, (h - m) / 2, m, m, 0, 0, size, size);
+      ok(c.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); fail(new Error("gambar")); };
+    img.src = url;
+  });
+}
+
+// Profil pengguna lain dibaca langsung agar nama dan foto selalu terbaru
+const profiles = new Map(), watching = new Set();
+function applyProfile(uid) {
+  const p = profiles.get(uid); if (!p) return;
+  const photo = safePhoto(p.photo), q = CSS.escape(uid);
+  document.querySelectorAll(`.av[data-uid="${q}"]`).forEach(el => paintAv(el, p.name, p.color, photo));
+  document.querySelectorAll(`.who[data-uid="${q}"]`).forEach(el => { el.textContent = p.name; });
+}
+function watchProfile(uid) {
+  if (!uid || watching.has(uid)) return;
+  watching.add(uid);
+  onSnapshot(doc(db, "users", uid),
+    s => { if (s.exists()) { profiles.set(uid, s.data()); applyProfile(uid); if (typists.has(uid)) paintTyping(); } },
+    () => watching.delete(uid));
 }
 
 /* ---------- Pasang sebagai aplikasi ---------- */
@@ -270,7 +346,7 @@ $("authForm").addEventListener("submit", async e => {
 onAuthStateChanged(auth, u => u ? load(u) : showWelcome());
 
 /* ---------- Profil ---------- */
-let pickColor = COLORS[0];
+let pickColor = COLORS[0], pickPhoto = "";
 function paintSw() {
   $("sw").replaceChildren(...COLORS.map(c => {
     const b = document.createElement("button");
@@ -280,21 +356,33 @@ function paintSw() {
     return b;
   }));
 }
-const paintPv = () => $("pAv").replaceChildren(avatar($("pName").value || me.name, pickColor, "lg"));
+function paintPv() {
+  $("pAv").replaceChildren(avatar($("pName").value || me.name, pickColor, "lg", "", pickPhoto));
+  $("pDel").hidden = !pickPhoto;
+}
 function paintMe() {
-  $("meAv").replaceChildren(avatar(me.name, me.color));
+  $("meAv").replaceChildren(avatar(me.name, me.color, "", "", me.photo));
   $("meName").textContent = me.name;
   $("meBio").textContent = me.bio || "Ubah profil";
 }
 $("meBtn").onclick = () => {
-  pickColor = me.color; $("pName").value = me.name; $("pBio").value = me.bio || "";
+  pickColor = me.color; pickPhoto = safePhoto(me.photo);
+  $("pName").value = me.name; $("pBio").value = me.bio || "";
   $("pErr").textContent = ""; paintSw(); paintPv(); $("pDlg").showModal();
 };
 $("pName").addEventListener("input", paintPv);
+$("pPick").onclick = () => $("pFile").click();
+$("pFile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try { pickPhoto = await thumbnail(f); $("pErr").textContent = ""; paintPv(); }
+  catch { $("pErr").textContent = "File itu tidak bisa dibaca sebagai gambar."; }
+};
+$("pDel").onclick = () => { pickPhoto = ""; paintPv(); };
 $("pCancel").onclick = () => $("pDlg").close();
 $("pForm").addEventListener("submit", async e => {
   e.preventDefault();
-  const p = { name: $("pName").value.trim(), bio: $("pBio").value.trim(), color: pickColor, updatedAt: serverTimestamp() };
+  const p = { name: $("pName").value.trim(), bio: $("pBio").value.trim(), color: pickColor, photo: pickPhoto, updatedAt: serverTimestamp() };
   if (!p.name) return;
   try {
     await setDoc(doc(db, "users", me.uid), p, { merge: true });
@@ -303,16 +391,41 @@ $("pForm").addEventListener("submit", async e => {
 });
 
 /* ---------- Room ---------- */
-$("newBtn").onclick = () => { $("rName").value = ""; $("rErr").textContent = ""; $("rDlg").showModal(); $("rName").focus(); };
+let rPhoto = "", rEdit = null;
+const paintRPv = () => { paintRic($("rAv"), rPhoto); $("rDel").hidden = !rPhoto; };
+function openRoomDlg(r) {
+  rEdit = r || null; rPhoto = r ? safePhoto(r.photo) : "";
+  $("rTitle").textContent = r ? "Ubah room" : "Room baru";
+  $("rGo").textContent = r ? "Simpan" : "Buat";
+  $("rName").value = r ? r.name : ""; $("rErr").textContent = "";
+  paintRPv(); $("rDlg").showModal(); $("rName").focus();
+}
+$("newBtn").onclick = () => openRoomDlg(null);
+$("editRoom").onclick = () => openRoomDlg(rooms.find(r => r.id === room));
 $("rCancel").onclick = () => $("rDlg").close();
+$("rPick").onclick = () => $("rFile").click();
+$("rFile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try { rPhoto = await thumbnail(f); $("rErr").textContent = ""; paintRPv(); }
+  catch { $("rErr").textContent = "File itu tidak bisa dibaca sebagai gambar."; }
+};
+$("rDel").onclick = () => { rPhoto = ""; paintRPv(); };
 $("rForm").addEventListener("submit", async e => {
   e.preventDefault();
   const name = $("rName").value.trim();
   if (!name) return;
   try {
-    const r = await addDoc(collection(db, "rooms"), { name, createdBy: me.uid, createdAt: serverTimestamp() });
-    $("rDlg").close(); location.hash = r.id;
-  } catch (err) { console.error(err); $("rErr").textContent = "Room gagal dibuat. Periksa rules Firestore."; }
+    if (rEdit) {
+      await updateDoc(doc(db, "rooms", rEdit.id), { name, photo: rPhoto });
+      $("rDlg").close();
+    } else {
+      const data = { name, createdBy: me.uid, createdAt: serverTimestamp() };
+      if (rPhoto) data.photo = rPhoto;
+      const r = await addDoc(collection(db, "rooms"), data);
+      $("rDlg").close(); location.hash = r.id;
+    }
+  } catch (err) { console.error(err); $("rErr").textContent = "Room gagal disimpan. Periksa rules Firestore."; }
 });
 
 function paintRooms() {
@@ -320,12 +433,17 @@ function paintRooms() {
     const a = document.createElement("a");
     a.className = "room" + (r.id === room ? " on" : "");
     a.href = "#" + r.id;
-    const i = document.createElement("i"); i.textContent = "#";
+    const i = document.createElement("i"); paintRic(i, r.photo);
     const s = document.createElement("span"); s.textContent = r.name;
     a.append(i, s);
+    const n = unread.get(r.id);
+    if (n) { a.classList.add("unread"); const b = document.createElement("b"); b.className = "badge"; b.textContent = n > 99 ? "99+" : n; a.append(b); }
     return a;
   }));
-  if (room) $("title").textContent = rooms.find(r => r.id === room)?.name || "Room";
+  const cur = rooms.find(r => r.id === room);
+  if (room) $("title").textContent = cur?.name || "Room";
+  $("hIcon").hidden = !room; if (room) paintRic($("hIcon"), cur?.photo);
+  $("editRoom").hidden = !(cur && me && cur.createdBy === me.uid);
 }
 
 function showNote(msg) {
@@ -336,8 +454,11 @@ function showNote(msg) {
 function route() {
   if (!me) return;
   const id = location.hash.slice(1);
-  unsubMsgs?.(); unsubMsgs = null; last = null;
+  stopTyping();
+  unsubMsgs?.(); unsubTyp?.(); unsubMsgs = unsubTyp = null; last = null;
+  typists.forEach(t => clearTimeout(t.timer)); typists.clear(); typEl = null;
   room = id || null;
+  if (id && unread.delete(id)) updateBadge();
   document.body.classList.toggle("in", !!id);
   $("form").hidden = !id;
   paintRooms();
@@ -348,17 +469,32 @@ function route() {
     snap => snap.docChanges().forEach(c => { if (c.type === "added") render(c.doc.data({ serverTimestamps: "estimate" })); }),
     err => { console.error(err); showNote("Pesan tidak bisa dimuat. Periksa rules Firestore."); }
   );
+  unsubTyp = onSnapshot(collection(db, "rooms", id, "typing"), snap => {
+    snap.docChanges().forEach(c => {
+      const uid = c.doc.id;
+      if (uid === me.uid) return;
+      if (c.type === "removed") { dropTyper(uid); return; }
+      const d = c.doc.data({ serverTimestamps: "estimate" });
+      const t = d.ts?.toMillis ? d.ts.toMillis() : Date.now();
+      if (Date.now() - t > 20000) return; // sisa lama, abaikan
+      clearTimeout(typists.get(uid)?.timer);
+      typists.set(uid, { name: d.name, timer: setTimeout(() => dropTyper(uid), 6000) });
+      watchProfile(uid);
+    });
+    paintTyping();
+  }, () => {});
   if (matchMedia("(min-width:760px)").matches) $("text").focus();
 }
 addEventListener("hashchange", route);
 
 function start() {
   $("auth").hidden = true; $("app").hidden = false;
-  paintMe();
+  paintMe(); paintBell(); hintNotif();
   unsubRooms?.();
   let seeded = false;
   unsubRooms = onSnapshot(query(collection(db, "rooms"), orderBy("createdAt")), snap => {
-    rooms = snap.docs.map(d => ({ id: d.id, name: d.data().name }));
+    rooms = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    rooms.forEach(r => watchRoomMsgs(r.id));
     if (!rooms.length && !seeded) {
       seeded = true;
       setDoc(doc(db, "rooms", "umum"), { name: "Umum", createdBy: me.uid, createdAt: serverTimestamp() }).catch(console.error);
@@ -370,6 +506,160 @@ function start() {
   route();
 }
 
+/* ---------- Notifikasi pesan masuk ---------- */
+const canNotify = "Notification" in window;
+const getFlag = () => { try { return localStorage.getItem("chat:notif") === "1"; } catch { return false; } };
+const setFlag = v => { try { localStorage.setItem("chat:notif", v ? "1" : "0"); } catch {} };
+const notifEnabled = () => canNotify && getFlag() && Notification.permission === "granted";
+
+function paintBell() {
+  const on = notifEnabled();
+  $("bellBtn").hidden = !canNotify;
+  $("bellSlash").style.display = on ? "none" : "";
+  $("bellBtn").setAttribute("aria-pressed", String(on));
+  $("bellBtn").title = on ? "Notifikasi aktif (ketuk untuk mematikan)" : "Aktifkan notifikasi";
+  $("bellBtn").setAttribute("aria-label", $("bellBtn").title);
+}
+
+let toastTimer = null, toastRoom = null;
+function toast(title, body = "", roomId = null) {
+  $("toastT").textContent = title; $("toastB").textContent = body; $("toastB").hidden = !body;
+  toastRoom = roomId; $("toast").hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").hidden = true; }, 4500);
+}
+$("toast").onclick = () => { $("toast").hidden = true; if (toastRoom) location.hash = toastRoom; };
+
+let ac = null;
+function unlockAudio() { try { ac ||= new (window.AudioContext || window.webkitAudioContext)(); ac.resume?.(); } catch {} }
+addEventListener("pointerdown", unlockAudio, { once: true });
+addEventListener("keydown", unlockAudio, { once: true });
+function beep() {
+  if (!ac || ac.state !== "running") return;
+  const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+  o.type = "sine"; o.frequency.setValueAtTime(880, t); o.frequency.exponentialRampToValueAtTime(1175, t + 0.1);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.26);
+}
+
+async function systemNotify(title, body, roomId) {
+  const opts = { body, icon: "icon-192.png", tag: "room-" + roomId, renotify: true, data: { room: roomId } };
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg) await reg.showNotification(title, opts); else new Notification(title, opts);
+  } catch (err) { console.error(err); }
+}
+
+$("bellBtn").onclick = async () => {
+  if (notifEnabled()) { setFlag(false); paintBell(); toast("Notifikasi dimatikan"); return; }
+  if (Notification.permission === "denied") {
+    toast("Notifikasi diblokir", "Izinkan lewat pengaturan situs di browser, lalu coba lagi."); return;
+  }
+  const p = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+  if (p === "granted") { setFlag(true); unlockAudio(); toast("Notifikasi aktif", "Kamu akan diberi tahu saat ada pesan baru."); }
+  else toast("Izin tidak diberikan", "Notifikasi tetap mati.");
+  paintBell();
+};
+
+function hintNotif() {
+  if (!canNotify || Notification.permission !== "default") return;
+  try { if (localStorage.getItem("chat:hint")) return; localStorage.setItem("chat:hint", "1"); } catch {}
+  setTimeout(() => toast("Mau diberi tahu?", "Ketuk ikon lonceng untuk mengaktifkan notifikasi pesan baru."), 1500);
+}
+
+function updateBadge() {
+  let n = 0; unread.forEach(v => { n += v; });
+  document.title = n ? `(${n}) Obrolan` : "Obrolan";
+  try { (n ? navigator.setAppBadge?.(n) : navigator.clearAppBadge?.())?.catch(() => {}); } catch {}
+  if (me) paintRooms();
+}
+const seenNow = () => {
+  if (room && unread.has(room) && document.visibilityState === "visible") { unread.delete(room); updateBadge(); }
+};
+document.addEventListener("visibilitychange", seenNow);
+addEventListener("focus", seenNow);
+
+function onIncoming(id, m) {
+  if (!me || m.uid === me.uid) return;
+  const visible = document.visibilityState === "visible" && document.hasFocus();
+  if (visible && id === room) return; // sedang dibaca langsung
+  unread.set(id, (unread.get(id) || 0) + 1);
+  updateBadge();
+  if (!notifEnabled()) return;
+  const roomName = rooms.find(r => r.id === id)?.name || "Obrolan";
+  const sender = profiles.get(m.uid)?.name || m.name || "Seseorang";
+  const body = String(m.text ?? "").slice(0, 120);
+  if (visible) { toast(`${sender} di ${roomName}`, body, id); beep(); }
+  else systemNotify(roomName, `${sender}: ${body}`, id);
+}
+
+// Memantau pesan baru di semua room (bukan hanya room yang sedang dibuka)
+function watchRoomMsgs(id) {
+  if (watchedRooms.has(id)) return;
+  let ready = false;
+  watchedRooms.set(id, onSnapshot(
+    query(collection(db, "rooms", id, "messages"), orderBy("ts", "desc"), limit(5)),
+    snap => {
+      if (snap.metadata.fromCache) return;   // hanya percaya data dari server
+      if (!ready) { ready = true; return; }  // snapshot pertama = kondisi awal, bukan pesan baru
+      snap.docChanges().forEach(c => {
+        if (c.type === "added" && !c.doc.metadata.hasPendingWrites) onIncoming(id, c.doc.data());
+      });
+    },
+    () => watchedRooms.delete(id)
+  ));
+}
+
+// Ketuk notifikasi sistem -> buka room terkait
+navigator.serviceWorker?.addEventListener("message", e => {
+  if (e.data?.type === "open-room" && e.data.room) location.hash = e.data.room;
+});
+
+/* ---------- Sedang mengetik ---------- */
+function dropTyper(uid) {
+  const o = typists.get(uid);
+  if (o) { clearTimeout(o.timer); typists.delete(uid); }
+  paintTyping();
+}
+function paintTyping() {
+  const log = $("log");
+  const near = log.scrollHeight - log.scrollTop - log.clientHeight < 120;
+  typEl?.remove(); typEl = null;
+  if (!typists.size) return;
+  const ids = [...typists.keys()];
+  const names = ids.map(u => profiles.get(u)?.name || typists.get(u).name || "Seseorang");
+  const label = names.length === 1 ? `${names[0]} sedang mengetik`
+    : names.length === 2 ? `${names[0]} dan ${names[1]} sedang mengetik` : `${names.length} orang sedang mengetik`;
+  const p = profiles.get(ids[0]) || {};
+  const row = document.createElement("div"); row.className = "row typing";
+  row.append(avatar(names[0], p.color, "", ids[0], p.photo));
+  const col = document.createElement("div"); col.className = "col";
+  const who = document.createElement("div"); who.className = "who"; who.textContent = label;
+  const b = document.createElement("div"); b.className = "bubble dots";
+  b.setAttribute("aria-hidden", "true");
+  b.append(document.createElement("span"), document.createElement("span"), document.createElement("span"));
+  col.append(who, b); row.append(col);
+  typEl = row; log.append(row);
+  if (near) log.scrollTop = log.scrollHeight;
+}
+function stopTyping() {
+  clearTimeout(typTimer); typTimer = null; typLast = 0;
+  if (typRoom && me) deleteDoc(doc(db, "rooms", typRoom, "typing", me.uid)).catch(() => {});
+  typRoom = null;
+}
+function noteTyping() {
+  if (!room || !me) return;
+  if (!$("text").value.trim()) return stopTyping();
+  const now = Date.now();
+  if (typRoom !== room || now - typLast > 2500) {
+    typLast = now; typRoom = room;
+    setDoc(doc(db, "rooms", room, "typing", me.uid), { name: me.name, ts: serverTimestamp() }).catch(() => {});
+  }
+  clearTimeout(typTimer); typTimer = setTimeout(stopTyping, 4000);
+}
+addEventListener("pagehide", stopTyping);
+
 /* ---------- Pesan ---------- */
 const fmt = t => new Date(t).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 function render(m) {
@@ -378,15 +668,21 @@ function render(m) {
   const t = m.ts?.toMillis ? m.ts.toMillis() : Date.now();
   const g = last && last.uid === m.uid && t - last.ts < 5 * 60 * 1000;
   last = { uid: m.uid, ts: t };
+  const p = profiles.get(m.uid) || {};
+  const name = p.name || m.name || "Anonim";
 
   const row = document.createElement("div");
   row.className = "row" + (own ? " own" : "") + (g ? " g" : "");
   if (!own) {
     if (g) { const s = document.createElement("div"); s.className = "sp"; row.append(s); }
-    else row.append(avatar(m.name, m.color));
+    else row.append(avatar(name, p.color || m.color, "", m.uid, p.photo));
+    watchProfile(m.uid);
   }
   const col = document.createElement("div"); col.className = "col";
-  if (!own && !g) { const w = document.createElement("div"); w.className = "who"; w.textContent = m.name || "Anonim"; col.append(w); }
+  if (!own && !g) {
+    const w = document.createElement("div"); w.className = "who"; w.dataset.uid = m.uid; w.textContent = name;
+    col.append(w);
+  }
   const b = document.createElement("div"); b.className = "bubble";
   const tm = document.createElement("span"); tm.className = "time"; tm.textContent = fmt(t);
   b.append(tm, String(m.text ?? ""));
@@ -394,7 +690,7 @@ function render(m) {
 
   const log = $("log");
   const near = log.scrollHeight - log.scrollTop - log.clientHeight < 120;
-  log.append(row);
+  if (typEl && typEl.parentNode === log) log.insertBefore(row, typEl); else log.append(row);
   if (own || near) log.scrollTop = log.scrollHeight;
 }
 
@@ -404,7 +700,7 @@ function autosize() {
   text.style.height = Math.min(text.scrollHeight, 140) + "px";
   $("sendBtn").disabled = !text.value.trim();
 }
-text.addEventListener("input", autosize);
+text.addEventListener("input", () => { autosize(); noteTyping(); });
 text.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey && !e.isComposing && !matchMedia("(pointer:coarse)").matches) {
     e.preventDefault(); $("form").requestSubmit();
@@ -414,7 +710,7 @@ $("form").addEventListener("submit", async e => {
   e.preventDefault();
   const body = text.value.trim();
   if (!body || !room) return;
-  text.value = ""; autosize();
+  text.value = ""; autosize(); stopTyping();
   try {
     await addDoc(collection(db, "rooms", room, "messages"),
       { uid: me.uid, name: me.name, color: me.color, text: body, ts: serverTimestamp() });
