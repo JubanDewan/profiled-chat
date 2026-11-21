@@ -114,6 +114,16 @@ dialog h2{font-size:18px;margin-bottom:16px}
 .toast{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:50;width:min(420px,calc(100% - 24px));display:block;text-align:left;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:10px 14px;box-shadow:0 8px 28px rgba(0,0,0,.22);cursor:pointer}
 .toast b{display:block;font-size:13px;color:var(--name)}
 .toast span{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bubble.hasimg{padding:4px}
+.pic{display:block;max-width:min(320px,100%);height:auto;border-radius:12px;cursor:zoom-in;background:var(--bg)}
+.hasimg .cap{padding:6px 8px 2px}
+.cap{display:flow-root}
+.prev{display:flex;align-items:center;gap:12px;padding:8px max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));background:var(--panel);border-top:1px solid var(--line)}
+.prev img{height:64px;max-width:120px;width:auto;border-radius:10px;object-fit:cover}
+.prev span{flex:1;font-size:13px;color:var(--muted)}
+#lb{padding:0;border:0;background:transparent;width:auto;max-width:100vw}
+#lb::backdrop{background:rgba(0,0,0,.82)}
+#lb img{display:block;max-width:min(94vw,900px);max-height:88dvh;border-radius:12px;cursor:zoom-out}
 @media (max-width:759px){
   .app{grid-template-columns:1fr}
   .chat{display:none}
@@ -159,12 +169,17 @@ dialog h2{font-size:18px;margin-bottom:16px}
       <button class="icon" id="editRoom" type="button" title="Ubah room" aria-label="Ubah room" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
     </header>
     <main id="log" aria-live="polite"></main>
+    <div class="prev" id="prev" hidden><img id="prevImg" alt="Pratinjau gambar"><span id="prevInfo"></span><button class="icon" id="prevX" type="button" aria-label="Hapus gambar" title="Hapus gambar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form class="send" id="form" hidden>
+      <button class="icon" id="attach" type="button" title="Kirim gambar" aria-label="Kirim gambar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></button>
+      <input type="file" id="imgFile" accept="image/*" hidden>
       <textarea id="text" rows="1" maxlength="500" placeholder="Tulis pesan" aria-label="Pesan"></textarea>
       <button class="btn" id="sendBtn" type="submit" aria-label="Kirim" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6v6.5L15 12 3.4 13.9z"/></svg></button>
     </form>
   </section>
 </div>
+
+<dialog id="lb"><img id="lbImg" alt="Gambar"></dialog>
 
 <button class="toast" id="toast" type="button" role="status" hidden><b id="toastT"></b><span id="toastB"></span></button>
 
@@ -226,10 +241,42 @@ let me = null, pendingName = null;
 let rooms = [], room = null, unsubRooms = null, unsubMsgs = null, unsubTyp = null, last = null;
 let typEl = null, typTimer = null, typLast = 0, typRoom = null;
 const typists = new Map(), unread = new Map(), watchedRooms = new Map();
+let pendingImg = null;
 
 const initial = s => (Array.from((s || "?").trim())[0] || "?").toUpperCase();
 // Hanya terima gambar data-URL kecil yang dibuat aplikasi ini
 const safePhoto = p => (typeof p === "string" && p.length < 20000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p)) ? p : "";
+
+// Gambar kiriman: hanya terima data-URL gambar berukuran wajar
+const safeImage = p => (typeof p === "string" && p.length < 150000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p)) ? p : "";
+function loadImg(file) {
+  return new Promise((ok, fail) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); ok(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); fail(new Error("gambar")); };
+    img.src = url;
+  });
+}
+// Kecilkan otomatis: sisi terpanjang maks 640 px, JPEG, usahakan di bawah ~90 KB
+async function shrink(file) {
+  const img = await loadImg(file);
+  if (!img.naturalWidth || !img.naturalHeight) throw new Error("ukuran");
+  let scale = Math.min(1, 640 / Math.max(img.naturalWidth, img.naturalHeight));
+  for (let n = 0; n < 6; n++) {
+    const w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const x = c.getContext("2d");
+    x.fillStyle = "#fff"; x.fillRect(0, 0, w, h);
+    x.imageSmoothingQuality = "high";
+    x.drawImage(img, 0, 0, w, h);
+    for (const q of [0.72, 0.6, 0.5, 0.4]) {
+      const data = c.toDataURL("image/jpeg", q);
+      if (data.length <= 90000) return { data, w, h };
+    }
+    scale *= 0.8;
+  }
+  throw new Error("terlalu besar");
+}
 
 function paintAv(d, name, color, photo) {
   d.style.backgroundColor = color || COLORS[0];
@@ -457,6 +504,7 @@ function route() {
   stopTyping();
   unsubMsgs?.(); unsubTyp?.(); unsubMsgs = unsubTyp = null; last = null;
   typists.forEach(t => clearTimeout(t.timer)); typists.clear(); typEl = null;
+  pendingImg = null; paintPrev();
   room = id || null;
   if (id && unread.delete(id)) updateBadge();
   document.body.classList.toggle("in", !!id);
@@ -589,7 +637,7 @@ function onIncoming(id, m) {
   if (!notifEnabled()) return;
   const roomName = rooms.find(r => r.id === id)?.name || "Obrolan";
   const sender = profiles.get(m.uid)?.name || m.name || "Seseorang";
-  const body = String(m.text ?? "").slice(0, 120);
+  const body = String(m.text ?? "").slice(0, 120) || (m.image ? "Mengirim gambar" : "");
   if (visible) { toast(`${sender} di ${roomName}`, body, id); beep(); }
   else systemNotify(roomName, `${sender}: ${body}`, id);
 }
@@ -685,7 +733,18 @@ function render(m) {
   }
   const b = document.createElement("div"); b.className = "bubble";
   const tm = document.createElement("span"); tm.className = "time"; tm.textContent = fmt(t);
-  b.append(tm, String(m.text ?? ""));
+  const pic = safeImage(m.image);
+  if (pic) {
+    b.classList.add("hasimg");
+    const im = new Image(); im.className = "pic"; im.alt = "Gambar terkirim"; im.decoding = "async"; im.src = pic;
+    const iw = Number(m.iw), ih = Number(m.ih);
+    if (iw > 0 && ih > 0 && iw <= 2000 && ih <= 2000) { im.style.width = Math.min(iw, 320) + "px"; im.style.aspectRatio = iw + " / " + ih; }
+    im.onclick = () => { $("lbImg").src = pic; $("lb").showModal(); };
+    b.append(im);
+  }
+  const cap = document.createElement("div"); cap.className = "cap";
+  cap.append(tm, String(m.text ?? ""));
+  b.append(cap);
   col.append(b); row.append(col);
 
   const log = $("log");
@@ -698,7 +757,7 @@ const text = $("text");
 function autosize() {
   text.style.height = "auto";
   text.style.height = Math.min(text.scrollHeight, 140) + "px";
-  $("sendBtn").disabled = !text.value.trim();
+  $("sendBtn").disabled = !text.value.trim() && !pendingImg;
 }
 text.addEventListener("input", () => { autosize(); noteTyping(); });
 text.addEventListener("keydown", e => {
@@ -706,17 +765,43 @@ text.addEventListener("keydown", e => {
     e.preventDefault(); $("form").requestSubmit();
   }
 });
+/* ---------- Kirim gambar ---------- */
+function paintPrev() {
+  const on = !!pendingImg && !$("form").hidden;
+  $("prev").hidden = !on;
+  if (on) {
+    $("prevImg").src = pendingImg.data;
+    $("prevInfo").textContent = `${pendingImg.w}×${pendingImg.h} px · ${Math.round(pendingImg.data.length * 0.75 / 1024)} KB`;
+  }
+}
+async function setImage(f) {
+  if (!f || !f.type.startsWith("image/")) return;
+  try { pendingImg = await shrink(f); paintPrev(); }
+  catch (err) { console.error(err); toast("Gambar tidak bisa dibaca", "Coba gambar lain (JPG, PNG, atau WebP)."); }
+  autosize();
+}
+$("attach").onclick = () => $("imgFile").click();
+$("imgFile").onchange = e => { const f = e.target.files[0]; e.target.value = ""; setImage(f); };
+$("prevX").onclick = () => { pendingImg = null; paintPrev(); autosize(); };
+text.addEventListener("paste", e => {
+  const f = [...(e.clipboardData?.files || [])].find(x => x.type.startsWith("image/"));
+  if (f) { e.preventDefault(); setImage(f); }
+});
+$("lb").onclick = () => $("lb").close();
+
 $("form").addEventListener("submit", async e => {
   e.preventDefault();
-  const body = text.value.trim();
-  if (!body || !room) return;
-  text.value = ""; autosize(); stopTyping();
+  const body = text.value.trim(), img = pendingImg;
+  if ((!body && !img) || !room) return;
+  const rid = room;
+  text.value = ""; pendingImg = null; autosize(); paintPrev(); stopTyping();
+  const msg = { uid: me.uid, name: me.name, color: me.color, text: body, ts: serverTimestamp() };
+  if (img) { msg.image = img.data; msg.iw = img.w; msg.ih = img.h; }
   try {
-    await addDoc(collection(db, "rooms", room, "messages"),
-      { uid: me.uid, name: me.name, color: me.color, text: body, ts: serverTimestamp() });
+    await addDoc(collection(db, "rooms", rid, "messages"), msg);
   } catch (err) {
     console.error(err);
-    text.value = body; autosize();
+    if (rid === room) { text.value = body; pendingImg = img; autosize(); paintPrev(); }
     alert("Pesan gagal terkirim. Periksa koneksi dan rules Firestore.");
   }
 });
