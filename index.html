@@ -3,7 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<title>Chat Messages</title>
+<meta name="description" content="Chat realtime dengan banyak room.">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111B21" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Obrolan">
+<script>addEventListener("beforeinstallprompt",e=>{e.preventDefault();window.__bip=e;dispatchEvent(new Event("bip"))});</script>
+<title>Obrolan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,7 +28,7 @@
 }
 *{box-sizing:border-box;margin:0}
 html,body{height:100%}
-body{background:var(--bg);color:var(--text);font:16px/1.45 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font:16px/1.45 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%}
 [hidden]{display:none!important}
 button,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--name);outline-offset:2px}
@@ -106,7 +116,7 @@ dialog h2{font-size:18px;margin-bottom:16px}
 <div class="auth" id="auth" hidden>
   <div class="card">
     <h1>Selamat datang</h1>
-    <p class="sub">Masukkan nama untuk mulai.</p>
+    <p class="sub">Masukkan namamu untuk mulai. Perangkat ini akan diingat, jadi kamu tidak perlu mengisinya lagi.</p>
     <form id="authForm">
       <label class="field">Nama<input id="aName" maxlength="24" autocomplete="nickname" required autofocus></label>
       <p class="err" id="aErr" role="alert"></p>
@@ -123,7 +133,8 @@ dialog h2{font-size:18px;margin-bottom:16px}
     </div>
     <h2>Room</h2>
     <nav id="rooms" aria-label="Daftar room"></nav>
-    <div style="padding:12px"><button class="btn ghost" id="newBtn" type="button" style="width:100%">Buat room baru</button></div>
+    <div style="padding:12px"><button class="btn ghost" id="newBtn" type="button" style="width:100%">Buat room baru</button>
+      <button class="btn ghost" id="installBtn" type="button" style="width:100%;margin-top:8px" hidden>Pasang aplikasi</button></div>
   </aside>
   <section class="chat">
     <header>
@@ -163,7 +174,7 @@ dialog h2{font-size:18px;margin-bottom:16px}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInAnonymously }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, addDoc, collection, query, orderBy, limitToLast, onSnapshot, serverTimestamp }
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, addDoc, collection, query, orderBy, limitToLast, onSnapshot, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -175,7 +186,11 @@ const app = initializeApp({
   appId: "1:502631034180:web:fe6bd48fc065f6b9bfbb11",
   measurementId: "G-31EHMFW9EP"
 });
-const auth = getAuth(app), db = getFirestore(app);
+const auth = getAuth(app);
+// Cache lokal: profil dan pesan yang pernah dibuka tetap terbaca saat koneksi putus
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+catch { db = getFirestore(app); }
 
 const $ = id => document.getElementById(id);
 const COLORS = ["#00A884", "#0E7C86", "#3B82F6", "#8B5CF6", "#D9468F", "#E26D2F", "#C0392B", "#64748B"];
@@ -191,6 +206,16 @@ function avatar(name, color, cls = "") {
   d.textContent = initial(name);
   return d;
 }
+
+/* ---------- Pasang sebagai aplikasi ---------- */
+const showInstall = () => { if (window.__bip) $("installBtn").hidden = false; };
+showInstall(); addEventListener("bip", showInstall);
+$("installBtn").onclick = async () => {
+  const ev = window.__bip; if (!ev) return;
+  ev.prompt(); await ev.userChoice.catch(() => {});
+  window.__bip = null; $("installBtn").hidden = true;
+};
+addEventListener("appinstalled", () => { window.__bip = null; $("installBtn").hidden = true; });
 
 /* ---------- Nama (tanpa email) ---------- */
 function showWelcome(msg = "") {
@@ -228,9 +253,16 @@ $("authForm").addEventListener("submit", async e => {
     else await signInAnonymously(auth);
   } catch (err) {
     pendingName = null; $("aGo").disabled = false;
-    $("aErr").textContent = err.code === "auth/operation-not-allowed"
-      ? "Login anonim belum diaktifkan di Firebase Console."
-      : err.code === "auth/network-request-failed" ? "Tidak ada koneksi internet." : "Gagal masuk. Coba lagi.";
+    console.error(err);
+    const off = "Login Anonymous belum diaktifkan. Buka Authentication → Sign-in method di Firebase Console, lalu aktifkan Anonymous.";
+    const M = {
+      "auth/operation-not-allowed": off,
+      "auth/admin-restricted-operation": off,
+      "auth/configuration-not-found": "Authentication belum dimulai. Buka Authentication di Firebase Console, lalu klik Get started.",
+      "auth/network-request-failed": "Tidak ada koneksi internet.",
+      "auth/invalid-api-key": "API key Firebase tidak valid."
+    };
+    $("aErr").textContent = M[err.code] || `Gagal masuk (${err.code || "kode tidak diketahui"}).`;
   }
 });
 
@@ -392,6 +424,9 @@ $("form").addEventListener("submit", async e => {
     alert("Pesan gagal terkirim. Periksa koneksi dan rules Firestore.");
   }
 });
+</script>
+<script>
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.error));
 </script>
 </body>
 </html>
